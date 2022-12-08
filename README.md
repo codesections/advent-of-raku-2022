@@ -14,10 +14,11 @@ Code](https://raku-advent.blog/2020/12/01/day-1-why-raku-is-ideal-for-advent-of-
 ## Participating
 
 Adding your answers to this repo is very simple.  Simply fork the repo, clone your fork,
-copy the `PLACEHOLDER_NAME` directory into a new directory with your username (or and
-other name you would like to go by), and start adding puzzle solutions.  By default, the
-repo is set up to ignore any files inside the `input` directory as well as any with the
-string `input` in their filename, so you can keep input files in the same directory as
+and add your daily solution to the right folder with a filename / filenames that refer to the author
+and which part of the daily task was solved. For convenience, you can use the helper.raku
+script that can advise or pre-create files based on a very simple convention.  
+By default, the repo is set up to ignore any files inside the `input` directory as well as any 
+with the string `input` in their filename, so you can keep input files in the same directory as
 your answers.  Once you have an answer that you're happy with, push your changes upstream
 and submit a pull request, which will likely be merged promptly.
 
