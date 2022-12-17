@@ -11,14 +11,18 @@ class Position
     has Int $.x;
     has Int $.y;
 
+    # Position is a value type
     method WHICH() { ValueObjAt.new("Position|$!x|$!y") }   # Value type
 
+    # Stringification
     method Str { "($!x,$!y)" }
     method gist { self.Str }
 
+    # Ranges - only purely horizontal or vertical are supported
     multi method to(Position $end where $end.x == $!x) { ($!y ... $end.y).map({ pos($!x, $^y) }) }
     multi method to(Position $end where $end.y == $!y) { ($!x ... $end.x).map({ pos($^x, $!y) }) }
 
+    # Moving downwards
     method S { pos($!x, $!y+1) }
     method SW { pos($!x-1, $!y+1) }
     method SE { pos($!x+1, $!y+1) }
@@ -26,8 +30,17 @@ class Position
 }
 
 sub pos(Int() $x, Int() $y) { Position.new(:$x, :$y) }
+
+# Override $p == $q and $p .. $q
 multi sub infix:<==>(Position $a, Position $b) { $a.x == $b.x && $a.y == $b.y }
 multi sub infix:<..>(Position $a, Position $b) { $a.to($b) }
+
+constant BLANK = '░';
+constant WALL = '▓';
+constant SOURCE = '+';
+constant SAND = 'o';
+
+subset Char of Str where *.chars == 1;
 
 class Cave
 {
@@ -37,30 +50,20 @@ class Cave
     has Int $.sand-dropped = 0;             # Number of units of sand dropped
     has Bool $.overflow = False;            # Has overflow happened?
 
-    has @!grid;
+    has Char %!grid{Position} is default(BLANK) = $!source => SOURCE;
     has Position $!min = $!source;
     has Position $!max = $!source;
-
-    constant BLANK = '░';
-    constant WALL = '▓';
-    constant SOURCE = '+';
-    constant SAND = 'o';
-
-    submethod TWEAK
-    {
-        @!grid[$!source.y;$!source.x] = SOURCE;
-    }
 
     method at(Position $p)
     {
         return WALL if $p.y ≥ $!floor-level;    # Floor is equivalent to wall
-        return @!grid[$p.y;$p.x] // BLANK;      # Points outside known grid are blank
+        return %!grid{$p};
     }
 
-    multi method set(Position $p, Str $val)
+    multi method set(Position $p, Char $val)
     {
         # Store the value in the right position in the grid
-        @!grid[$p.y;$p.x] = $val;
+        %!grid{$p} = $val;
 
         # Extend the boundaries of the grid, if necessary
         if $p.x > $!max.x || $p.y > $!max.y {
@@ -72,7 +75,7 @@ class Cave
     }
     multi method set(@p, $val) { self.set($_, $val) for @p }
 
-    method draw-path(Str $path, Str $val = WALL)
+    method draw-path(Str $path, Char $val = WALL)
     {
         # Draw a line for each segment in the path
         for $path.comb(/\d+/).rotor(4 => -2) -> ($x1,$y1, $x2,$y2) {
@@ -94,11 +97,16 @@ class Cave
 
     method drop-sand
     {
-        my $p = $!source;
+        # Keep track of the path of the sand.  The next unit of sand will
+        # follow at least all but one of these drops.
+        state @path;
+        my $p = @path.pop // $!source;
+
         DROP:
         loop {
             # Drop to the first downward position that is available
             if my $q = $p.downwards.first({ self.at($^q) eq BLANK }) {
+                @path.push($p);
                 $p = $q;
             }
             else {
